@@ -1,5 +1,8 @@
 # jellyfish!!! — study notes + credits
 
+## View the project here!!
+https://nyrrine.github.io/evernight/
+
 ## Credit
 
 This was a **study project**: I started from an idea I loved and rebuilt/extended it to learn more about p5.js, timing/parametric motion, and shader-style post effects.
