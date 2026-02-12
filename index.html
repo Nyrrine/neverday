@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>p5.js Sketch</title>
+  <style>
+    body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+</head>
+<body>
+  <script>
+const bloomFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;
+uniform vec2 texelSize;
+uniform float uStrength;
+uniform float uRadius;
+
+void main() {
+  vec4 orig = texture2D(tex0, vTexCoord);
+  vec4 blur = vec4(0.0);
+  float total = 0.0;
+  for (float x = -3.0; x <= 3.0; x += 1.0) {
+    for (float y = -3.0; y <= 3.0; y += 1.0) {
+      float w = exp(-(x*x + y*y) / 8.0);
+      blur += texture2D(tex0, vTexCoord + vec2(x, y) * texelSize * uRadius) * w;
+      total += w;
+    }
+  }
+  blur /= total;
+  gl_FragColor = orig + blur * uStrength;
+}`;
+
+const ditherFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;
+uniform vec2 canvasSize;
+
+float bayer4(vec2 pos) {
+  ivec2 p = ivec2(mod(pos, 4.0));
+  int i = p.x + p.y * 4;
+  float m;
+  if (i == 0) m = 0.0;   else if (i == 1) m = 8.0;
+  else if (i == 2) m = 2.0;  else if (i == 3) m = 10.0;
+  else if (i == 4) m = 12.0; else if (i == 5) m = 4.0;
+  else if (i == 6) m = 14.0; else if (i == 7) m = 6.0;
+  else if (i == 8) m = 3.0;  else if (i == 9) m = 11.0;
+  else if (i == 10) m = 1.0; else if (i == 11) m = 9.0;
+  else if (i == 12) m = 15.0;else if (i == 13) m = 7.0;
+  else if (i == 14) m = 13.0;else m = 5.0;
+  return m / 16.0;
+}
+
+void main() {
+  vec4 color = texture2D(tex0, vTexCoord);
+  float bayerVal = bayer4(vTexCoord * canvasSize);
+  float levels = 10.0;
+  vec3 dithered;
+  dithered.r = floor(color.r * levels + bayerVal) / levels;
+  dithered.g = floor(color.g * levels + bayerVal) / levels;
+  dithered.b = floor(color.b * levels + bayerVal) / levels;
+  vec3 result = mix(color.rgb, dithered, 0.6);
+  gl_FragColor = vec4(result, 1.0);
+}`;
+
+let t = 0, scene, sctx, bloomShader, ditherShader;
+
+function setup() {
+  createCanvas(400, 400, WEBGL);
+  scene = createGraphics(400, 400);
+  sctx = scene.drawingContext;
+  bloomShader = createFilterShader(bloomFrag);
+  ditherShader = createFilterShader(ditherFrag);
+}
+
+function draw() {
+  scene.background(0);
+  t += PI / 15;
+  for (let i = 3e4; i--;) {
+    sctx.fillStyle = i % 2 === 0
+      ? 'rgba(255,150,200,0.18)'   // March 7th pink
+      : 'rgba(220,60,80,0.18)';    // Evernight red
+    let k = i < 2e4 ? sin(i / 9) * 9 : 4 * cos(i / 49) * cos(i / 3690);
+    let e = i / 984 - 12;
+    let d = mag(k, e) ** 2 / 99 + 1;
+    let q = k * (4 + sin(d * 16 - t + k)) - 5 * sin(atan2(k, e) * 9);
+    let c = d * 1.1 - t / 18 + (i % 2) * 3;
+    let x = q + 60 * sin(c) + 200;
+    let y = (q + 40) * sin(c - d) + d * 79;
+    sctx.fillRect(x, y, 1, 1);
+  }
+
+  background(0);
+  image(scene, -200, -200);
+
+  bloomShader.setUniform('uStrength', 0.4);
+  bloomShader.setUniform('uRadius', 6.0);
+  filter(bloomShader);
+  filter(ditherShader);
+}
+  </script>
+</body>
+</html>
