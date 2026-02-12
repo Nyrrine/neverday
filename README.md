@@ -1,7 +1,7 @@
 # jellyfish!!! — study notes + credits
 
 ## View the project here!!
-https://nyrrine.github.io/evernight/
+https://nyrrine.github.io/neverday/
 
 ## Credit
 
